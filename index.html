@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Tromboembolismo Pulmonar (TEP)</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --success: #22c55e;
+            --error: #ef4444;
+            --border-color: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app-container {
+            width: 90%;
+            max-width: 700px;
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .stat-correct { background-color: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .stat-wrong { background-color: rgba(239, 68, 68, 0.2); color: var(--error); }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background-color: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .question-text {
+            font-size: 1.25rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .options-container {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .option-btn {
+            background-color: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 1rem;
+            text-align: left;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background-color: rgba(56, 189, 248, 0.05);
+        }
+
+        .option-btn.correct {
+            background-color: var(--success) !important;
+            border-color: var(--success) !important;
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error) !important;
+            border-color: var(--error) !important;
+            color: white;
+        }
+
+        .option-btn:disabled {
+            cursor: default;
+            opacity: 0.8;
+        }
+
+        #next-btn {
+            margin-top: 2rem;
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            display: none;
+        }
+
+        #next-btn:hover { opacity: 0.9; }
+
+        .results-view { text-align: center; }
+        .results-score { font-size: 4rem; font-weight: bold; margin: 1rem 0; color: var(--accent-color); }
+        .restart-btn {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="header">
+            <div>
+                <span id="current-page-num">1</span> / <span id="total-questions-num">29</span>
+            </div>
+            <div class="stats">
+                <div class="stat-item stat-correct">Aciertos: <span id="count-correct">0</span></div>
+                <div class="stat-item stat-wrong">Errores: <span id="count-wrong">0</span></div>
+            </div>
+        </div>
+
+        <div class="progress-bar-container">
+            <div id="progress-fill"></div>
+        </div>
+
+        <div id="quiz-content">
+            <div id="question" class="question-text"></div>
+            <div id="options" class="options-container"></div>
+            <button id="next-btn" onclick="nextQuestion()">Siguiente Pregunta</button>
+        </div>
+
+        <div id="results-content" class="results-view" style="display: none;">
+            <h2>Test Finalizado</h2>
+            <div class="results-score" id="final-score">0%</div>
+            <p id="final-stats"></p>
+            <button class="restart-btn" onclick="restartQuiz()">Reiniciar Test</button>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            {
+                q: "1. ¿En cuál de estos pacientes existe un mayor riesgo de TEP?",
+                options: ["a. Cirugía menor.", "b. Cirugía general en mayores de 40 años, con enfermedad tromboembólica venosa previa.", "c. Paciente sometido a anestesia general para cirugía de hernia de hiato.", "d. Traumatismos pocos importantes."],
+                correct: 1
+            },
+            {
+                q: "2. La causa más frecuente del TEP es:",
+                options: ["a. Embolia grasa", "b. Trombo hemático", "c. Embolia séptica", "d. Embolia por sustancias extrañas"],
+                correct: 1
+            },
+            {
+                q: "3. Causas principales de la formación del trombo venoso (Tríada de Virchow):",
+                options: ["a. Estasis venoso", "b. Lesión endotelial", "c. Estado de hipercoagulación", "d. Todas son verdaderas"],
+                correct: 3
+            },
+            {
+                q: "4. ¿Dónde se originan la mayoría de los émbolos pulmonares?",
+                options: ["a. Directamente en la aurícula derecha", "b. Venas pélvicas", "c. Sistema venoso profundo de extremidades inferiores", "d. In situ, en territorio pulmonar."],
+                correct: 2
+            },
+            {
+                q: "5. Entre los siguientes síntomas, ¿cuál sería la forma de presentación más frecuente del TEP?",
+                options: ["a. Crisis de broncoespasmo", "b. Hemoptisis", "c. Disnea, habitualmente de inicio brusco", "d. Palpitaciones"],
+                correct: 2
+            },
+            {
+                q: "6. Un paciente con TEP masivo/inestable presenta:",
+                options: ["a. Bradicardia e hipertensión", "b. PA central alta, hipoxemia, bradicardia e hipertensión.", "c. Hipotensión, taquicardia, hipoxemia y PVC elevada", "d. Taquipnea, hipoxemia e hipertensión"],
+                correct: 2
+            },
+            {
+                q: "7. Cuál de las siguientes afirmaciones respecto al tratamiento de TEP es FALSA:",
+                options: ["a. En TEP masivo con shock se optará por tratamiento fibrinolítico.", "b. El tratamiento principal es anticoagulación con heparina.", "c. El fármaco de primera elección para mejorar la hemodinámica es la dobutamina.", "d. Los mórficos son fármacos de elección para dolor pleurítico en pacientes con colapso cardiovascular incipiente."],
+                correct: 3
+            },
+            {
+                q: "8. ¿Qué factor de la Tríada de Virchow se le atribuye a los anticonceptivos?",
+                options: ["a. Lesión endotelial", "b. Estasis sanguínea", "c. Hipercoagulabilidad", "d. La tríada de Virchow no afecta en este caso."],
+                correct: 2
+            },
+            {
+                q: "9. ¿Qué alimentos deben ser regulados en un paciente anticoagulado (por vitamina K)?",
+                options: ["a. La dieta no debe tenerse en cuenta.", "b. Perejil, espárrago y espinacas.", "c. Col rizada, zanahoria y brócoli.", "d. Orégano, albahaca y almendras."],
+                correct: 1
+            },
+            {
+                q: "10. ¿Qué signo es característico (frecuente) del TEP?",
+                options: ["a. No tolera el decúbito", "b. Dolor torácico", "c. Hipertensión", "d. Dolor pleurítico"],
+                correct: 3
+            },
+            {
+                q: "11. Cuadro brusco de disnea, taquipnea intensa, antecedente de fractura de meseta tibial y dímero D muy elevado. ¿Diagnóstico?",
+                options: ["a. Edema agudo de pulmón", "b. Tromboembolismo pulmonar", "c. Shock cardiogénico", "d. Faltan datos."],
+                correct: 1
+            },
+            {
+                q: "12. Tratamiento ante TEP con sobrecarga de VD si la Heparina está contraindicada:",
+                options: ["a. Fibrinolíticos", "b. Embolectomía", "c. Filtro en vena cava inferior", "d. Ninguna es correcta"],
+                correct: 2
+            },
+            {
+                q: "13. Diferencia clínica entre TEP y shock cardiogénico:",
+                options: ["a. Localización del dolor", "b. Ritmo cardiaco", "c. Frecuencia respiratoria", "d. Todas son correctas"],
+                correct: 3
+            },
+            {
+                q: "14. Constante vital esperable ante un TEP:",
+                options: ["a. PVC elevada", "b. Bradicardia", "c. Hipertensión", "d. Frecuencia respiratoria baja"],
+                correct: 0
+            },
+            {
+                q: "15. Manifestación que NO corresponde al TEP:",
+                options: ["a. Disnea", "b. Crepitaciones", "c. Dolor opresivo en el pecho", "d. Taquipnea"],
+                correct: 2
+            },
+            {
+                q: "16. Droga vasoactiva para aumentar diuresis (dosis dopaminérgica):",
+                options: ["a. Dopamina 0,3 microg/kg/min", "b. Dopamina entre 0.3 y 10 microgramos/kg/min", "c. Seguril", "d. Dobutamina"],
+                correct: 0
+            },
+            {
+                q: "17. ¿Cuál de esta fisiopatología cardiaca NO se produce en el TEP?",
+                options: ["a. Reducción del área transversal del lecho arterial pulmonar", "b. Hipotensión pulmonar", "c. Aumento de la postcarga del VD", "d. Disminución de la presión arteriovenosa coronaria"],
+                correct: 1
+            },
+            {
+                q: "18. En un paciente con TEP (especialmente si es masivo), la PA suele ser:",
+                options: ["a. Hipotensión", "b. Hipertensión", "c. Normotenso", "d. Ninguna respuesta es correcta"],
+                correct: 0
+            },
+            {
+                q: "19. Manifestación que se corresponde con el TEP:",
+                options: ["a. Síncope", "b. Cefaleas", "c. Aumento del retorno venoso", "d. Dolor articulación"],
+                correct: 0
+            },
+            {
+                q: "20. ¿Cómo se inicia el proceso de TEP?",
+                options: ["a. Con la formación de un trombo", "b. Con la activación de la cascada de coagulación", "c. Con la agregación plaquetaria alrededor de las válvulas venosas", "d. Con el alojamiento de un émbolo en una arteria pulmonar"],
+                correct: 3
+            },
+            {
+                q: "21. El síncope en el TEP es consecuencia de la obstrucción de qué arteria:",
+                options: ["a. Arteria aorta", "b. Femoral", "c. Poplítea", "d. Arteria Pulmonar"],
+                correct: 3
+            },
+            {
+                q: "22. Factor de riesgo relacionado con el TEP:",
+                options: ["a. Micciones frecuentes", "b. Intervención quirúrgica reciente", "c. Alto consumo de carne roja", "d. Automedicación"],
+                correct: 1
+            },
+            {
+                q: "23. Si hay shock/hipotensión y los fibrinolíticos están contraindicados:",
+                options: ["a. Trasladar a planta.", "b. Usar AINES.", "c. Considerar una embolectomía", "d. Usar heparina"],
+                correct: 2
+            },
+            {
+                q: "24. ¿Por qué el cáncer es un factor de riesgo de TEP?",
+                options: ["a. Debilidad inmunitaria.", "b. Obstrucción celular directa.", "c. Neumonías obstructivas.", "d. Aumento de la coagulabilidad sanguínea."],
+                correct: 3
+            },
+            {
+                q: "25. ¿Qué es el 'cor pulmonale'?",
+                options: ["a. Insuficiencia del lado derecho del corazón.", "b. Ataque al corazón por pulmón insuficiente.", "c. Maniobra de reanimación.", "d. Factor de riesgo del TEP."],
+                correct: 0
+            },
+            {
+                q: "26. Cuidado de enfermería INCORRECTO en TEP:",
+                options: ["a. Posición semifowler.", "b. Observar oxigenación tisular.", "c. Administración de anticoagulantes.", "d. En caso de hipertensión, administrar dopamina."],
+                correct: 3
+            },
+            {
+                q: "27. Paciente obeso, encamado post-cirugía cadera, sin heparina, con disnea y taquipnea. ¿Diagnóstico?",
+                options: ["a. Taponamiento cardíaco.", "b. Edema agudo de pulmón.", "c. Tromboembolismo pulmonar.", "d. Crisis hipertensiva."],
+                correct: 2
+            },
+            {
+                q: "28. ¿Qué medida NO formaría parte del tratamiento del TEP agudo?",
+                options: ["a. Aconsejar al paciente que pasee dos veces al día para disolver el trombo (fase aguda).", "b. Heparina de bajo peso molecular.", "c. Trombolisis en inestables.", "d. Expansores de plasma en inestabilidad hemodinámica."],
+                correct: 0
+            },
+            {
+                q: "29. Factor de riesgo del TEP INCORRECTO:",
+                options: ["a. Más de 3 días de inmovilización.", "b. Obesidad.", "c. Hipotensión.", "d. Anticonceptivos orales."],
+                correct: 2
+            }
+        ];
+
+        let currentQuestion = 0;
+        let corrects = 0;
+        let wrongs = 0;
+        let answered = false;
+
+        function initQuiz() {
+            document.getElementById('total-questions-num').innerText = quizData.length;
+            showQuestion();
+        }
+
+        function showQuestion() {
+            answered = false;
+            const data = quizData[currentQuestion];
+            document.getElementById('current-page-num').innerText = currentQuestion + 1;
+            document.getElementById('question').innerText = data.q;
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+            data.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => selectOption(index);
+                optionsDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+            updateProgress();
+        }
+
+        function selectOption(index) {
+            if (answered) return;
+            answered = true;
+            const data = quizData[currentQuestion];
+            const buttons = document.querySelectorAll('.option-btn');
+            if (index === data.correct) {
+                buttons[index].classList.add('correct');
+                corrects++;
+            } else {
+                buttons[index].classList.add('wrong');
+                buttons[data.correct].classList.add('correct');
+                wrongs++;
+            }
+            document.getElementById('count-correct').innerText = corrects;
+            document.getElementById('count-wrong').innerText = wrongs;
+            buttons.forEach(btn => btn.disabled = true);
+            document.getElementById('next-btn').style.display = 'block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            if (currentQuestion < quizData.length) {
+                showQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function updateProgress() {
+            const progress = (currentQuestion / quizData.length) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results-content').style.display = 'block';
+            document.getElementById('progress-fill').style.width = '100%';
+            const scorePercent = Math.round((corrects / quizData.length) * 100);
+            document.getElementById('final-score').innerText = scorePercent + '%';
+            document.getElementById('final-stats').innerText = `Has completado el test sobre TEP con ${corrects} aciertos y ${wrongs} errores.`;
+        }
+
+        function restartQuiz() {
+            currentQuestion = 0;
+            corrects = 0;
+            wrongs = 0;
+            document.getElementById('count-correct').innerText = '0';
+            document.getElementById('count-wrong').innerText = '0';
+            document.getElementById('quiz-content').style.display = 'block';
+            document.getElementById('results-content').style.display = 'none';
+            showQuestion();
+        }
+
+        window.onload = initQuiz;
+    </script>
+</body>
+</html>
